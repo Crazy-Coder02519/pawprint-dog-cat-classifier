@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PawPrint | Dog or Cat Classifier</title>
+  <title>PawPrint | Dog, Cat or Other Classifier</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
@@ -63,14 +64,14 @@
 
     <section class="hero">
       <div class="eyebrow">Meet your image classifier</div>
-      <h1>Is it a Dog or a Cat?</h1>
+      <h1>Is it a Dog, Cat or Other?</h1>
       <p>Upload a picture or use your camera — let the model make a prediction.</p>
     </section>
 
     <main class="layout">
       <section class="panel">
         <h2>1. Add an image</h2>
-        <p class="sub">Choose a clear photo of a dog or a cat.</p>
+        <p class="sub">Choose a clear photo of a dog, cat or any other object.</p>
         <div class="preview" id="preview">
           <div class="placeholder" id="placeholder">
             <div class="paw">📷</div>
@@ -109,11 +110,15 @@
             <div class="bar-head"><span>🐱 Cat</span><span id="cat-score">—</span></div>
             <div class="track"><div class="fill" id="cat-bar"></div></div>
           </div>
+          <div>
+            <div class="bar-head"><span>🌍 Other</span><span id="other-score">—</span></div>
+            <div class="track"><div class="fill" id="other-bar"></div></div>
+          </div>
         </div>
-        <p class="hint">Tip: For a better prediction, use a well-lit image where the animal is clearly visible. The confidence score shows how strongly the model matches each class.</p>
+        <p class="hint">Tip: Upload a clear, well-lit image for better results. Images that do not contain dogs or cats should be classified as Other.</p>
       </section>
     </main>
-    <footer>Powered by your Teachable Machine image model · Dog & Cat</footer>
+    <footer>Powered by your Teachable Machine image model · Dog, Cat & Other</footer>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
@@ -130,7 +135,7 @@
         status.textContent = "Model ready! Upload an image or start the camera.";
         $("classify-btn").disabled = !selectedImage;
       } catch (e) {
-        status.textContent = "Couldn't load the model. Please run this website using the included local server instructions.";
+        status.textContent = "Couldn't load the model. Please check your model files.";
         console.error(e);
       }
     }
@@ -138,7 +143,10 @@
     $("file-input").addEventListener("change", event => {
       const file = event.target.files[0];
       if (!file) return;
-      if (!file.type.startsWith("image/")) { status.textContent = "Please choose an image file."; return; }
+      if (!file.type.startsWith("image/")) {
+        status.textContent = "Please choose an image file.";
+        return;
+      }
       const url = URL.createObjectURL(file);
       const img = $("image-preview");
       img.onload = () => URL.revokeObjectURL(url);
@@ -146,8 +154,8 @@
       img.style.display = "block";
       $("placeholder").style.display = "none";
       $("webcam-container").style.display = "none";
-      selectedImage = img;
       stopCamera();
+      selectedImage = img;
       $("classify-btn").disabled = !model;
       status.textContent = "Image selected. Ready to classify!";
       resetResults();
@@ -156,7 +164,10 @@
     function resetResults() {
       $("prediction").textContent = "Ready!";
       $("confidence").textContent = "Press “Classify image” to see the result.";
-      ["dog","cat"].forEach(k => { $(k+"-score").textContent = "—"; $(k+"-bar").style.width = "0%"; });
+      ["dog","cat","other"].forEach(k => {
+        $(k+"-score").textContent = "—";
+        $(k+"-bar").style.width = "0%";
+      });
     }
 
     $("classify-btn").addEventListener("click", async () => {
@@ -166,18 +177,24 @@
         const predictions = await model.predict(selectedImage);
         showPredictions(predictions);
         status.textContent = "Done! You can try another image.";
-      } catch (e) { status.textContent = "Sorry, this image could not be classified."; console.error(e); }
+      } catch (e) {
+        status.textContent = "Sorry, this image could not be classified.";
+        console.error(e);
+      }
     });
 
     function showPredictions(predictions) {
       const sorted = [...predictions].sort((a,b) => b.probability - a.probability);
       const best = sorted[0];
-      const pretty = best.className;
-      $("prediction").textContent = pretty;
-      $("confidence").textContent = (best.probability * 100).toFixed(1) + "% confidence";
-      predictions.forEach(p => {
-        const key = p.className.toLowerCase();
-        if (key === "dog" || key === "cat") {
+      $("prediction").textContent = best.className;
+      $("confidence").textContent =
+        (best.probability * 100).toFixed(1) + "% confidence";
+
+      ["dog","cat","other"].forEach(key => {
+        const p = predictions.find(
+          item => item.className.trim().toLowerCase() === key
+        );
+        if (p) {
           const pct = p.probability * 100;
           $(key+"-score").textContent = pct.toFixed(1) + "%";
           $(key+"-bar").style.width = pct + "%";
@@ -186,7 +203,10 @@
     }
 
     async function startCamera() {
-      if (!model) { status.textContent = "The model is still loading. Please wait."; return; }
+      if (!model) {
+        status.textContent = "The model is still loading. Please wait.";
+        return;
+      }
       try {
         stopCamera();
         $("image-preview").style.display = "none";
@@ -210,12 +230,14 @@
     }
 
     function stopCamera() {
-      if (webcam && webcamActive) { webcam.stop(); }
+      if (webcam && webcamActive) webcam.stop();
       webcamActive = false;
       $("stop-btn").style.display = "none";
       $("camera-btn").style.display = "inline-flex";
-      if ($("webcam-container").style.display === "block") $("webcam-container").style.display = "none";
-      if (!selectedImage || selectedImage === webcam?.canvas) {
+      if ($("webcam-container").style.display === "block") {
+        $("webcam-container").style.display = "none";
+      }
+      if (!selectedImage || (webcam && selectedImage === webcam.canvas)) {
         selectedImage = null;
         $("placeholder").style.display = "block";
         $("classify-btn").disabled = true;
@@ -230,7 +252,10 @@
       status.textContent = "Camera stopped. Upload an image or start the camera again.";
       resetResults();
     });
+
     loadModel();
   </script>
 </body>
 </html>
+
+
