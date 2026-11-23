@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PawPrint | Dog or Cat Classifier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink:#25243a; --muted:#77768b; --purple:#7065d8; --purple-dark:#594fc1; --lav:#f1efff; --line:#e9e7f3; --bg:#f8f7fc; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:radial-gradient(circle at 10% 0%,#eeebff 0,transparent 32%),var(--bg); color:var(--ink); font-family:"DM Sans",sans-serif; }
+    .wrap { width:min(1050px,92%); margin:auto; padding:30px 0 42px; }
+    header { display:flex; align-items:center; justify-content:space-between; margin-bottom:34px; }
+    .brand { display:flex; gap:11px; align-items:center; font:800 21px Manrope,sans-serif; letter-spacing:-.6px; }
+    .logo { width:40px;height:40px;border-radius:14px;background:var(--purple);display:grid;place-items:center;color:white;font-size:22px;box-shadow:0 7px 18px #7065d844; }
+    .tag { color:var(--muted);font-size:13px;background:white;border:1px solid var(--line);padding:8px 13px;border-radius:99px; }
+    .hero { text-align:center; margin:28px 0 30px; }
+    .eyebrow { color:var(--purple-dark);font-size:12px;font-weight:700;letter-spacing:1.7px;text-transform:uppercase; }
+    h1 { font:800 clamp(32px,5vw,48px)/1.12 Manrope,sans-serif;letter-spacing:-1.8px;margin:12px 0 10px; }
+    .hero p { color:var(--muted);margin:0;font-size:15px; }
+    .layout { display:grid;grid-template-columns:1.05fr .95fr;gap:20px;align-items:stretch; }
+    .panel { background:#fff;border:1px solid var(--line);border-radius:24px;padding:24px;box-shadow:0 12px 35px #332a6b0b; }
+    .panel h2 { font:700 17px Manrope,sans-serif;margin:0 0 5px; }
+    .sub { color:var(--muted);font-size:13px;margin:0 0 18px; }
+    .preview { height:300px;border:1.5px dashed #d8d4ed;border-radius:18px;background:#faf9ff;display:grid;place-items:center;overflow:hidden;position:relative; }
+    .preview img,.preview canvas { width:100%;height:100%;object-fit:contain;display:none; }
+    .placeholder { text-align:center;color:var(--muted);padding:20px; }
+    .placeholder .paw { font-size:42px;margin-bottom:8px; }
+    .placeholder strong { display:block;color:var(--ink);font-size:14px;margin-bottom:4px; }
+    .actions { display:flex;gap:10px;flex-wrap:wrap;margin-top:16px; }
+    button,.upload-label { border:0;border-radius:12px;padding:12px 16px;font:700 13px "DM Sans";cursor:pointer;transition:.18s;display:inline-flex;align-items:center;justify-content:center;gap:8px; }
+    button:disabled { opacity:.45;cursor:not-allowed; }
+    .primary { background:var(--purple);color:white;box-shadow:0 6px 14px #7065d833; }
+    .primary:hover:not(:disabled) { background:var(--purple-dark);transform:translateY(-1px); }
+    .secondary,.upload-label { background:var(--lav);color:var(--purple-dark); }
+    .secondary:hover,.upload-label:hover { background:#e7e3ff; }
+    input[type=file] { display:none; }
+    #webcam-container { width:100%; }
+    #webcam-container canvas { width:100%;height:300px;object-fit:contain;border-radius:16px;background:#faf9ff; }
+    .right-panel { display:flex;flex-direction:column; }
+    .result-box { background:linear-gradient(145deg,#f4f2ff,#fbfaff);border:1px solid #e8e4ff;border-radius:18px;padding:22px;margin-top:8px; }
+    .result-label { color:var(--muted);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase; }
+    .prediction { font:800 35px Manrope,sans-serif;letter-spacing:-1px;margin:7px 0 3px;color:var(--purple-dark); }
+    .confidence { color:var(--muted);font-size:13px; }
+    .bars { margin-top:23px;display:grid;gap:17px; }
+    .bar-head { display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:8px; }
+    .track { height:9px;background:#efedf6;border-radius:99px;overflow:hidden; }
+    .fill { height:100%;width:0;background:linear-gradient(90deg,#8d83ed,#6257ce);border-radius:99px;transition:width .35s ease; }
+    .hint { color:var(--muted);font-size:12px;line-height:1.6;margin-top:auto;padding-top:22px; }
+    .status { min-height:20px;color:var(--muted);font-size:12px;margin-top:12px; }
+    footer { text-align:center;color:#9290a2;font-size:11px;margin-top:25px; }
+    @media(max-width:760px){.layout{grid-template-columns:1fr}.hero{margin-top:18px}.preview,#webcam-container canvas{height:250px}header{margin-bottom:22px}.tag{display:none}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand"><div class="logo">🐾</div> PawPrint</div>
+      <div class="tag">AI Image Classification</div>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">Meet your image classifier</div>
+      <h1>Is it a Dog or a Cat?</h1>
+      <p>Upload a picture or use your camera — let the model make a prediction.</p>
+    </section>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>1. Add an image</h2>
+        <p class="sub">Choose a clear photo of a dog or a cat.</p>
+        <div class="preview" id="preview">
+          <div class="placeholder" id="placeholder">
+            <div class="paw">📷</div>
+            <strong>Your image will appear here</strong>
+            <span>JPG, PNG or WEBP</span>
+          </div>
+          <img id="image-preview" alt="Selected image preview">
+        </div>
+        <div id="webcam-container" style="display:none"></div>
+        <div class="actions">
+          <label class="upload-label" for="file-input">＋ Upload image</label>
+          <input id="file-input" type="file" accept="image/*">
+          <button class="secondary" id="camera-btn">◎ Use camera</button>
+          <button class="secondary" id="stop-btn" style="display:none">Stop camera</button>
+        </div>
+        <div class="actions">
+          <button class="primary" id="classify-btn" disabled>✦ Classify image</button>
+        </div>
+        <div class="status" id="status" aria-live="polite">Loading your AI model…</div>
+      </section>
+
+      <section class="panel right-panel">
+        <h2>2. Prediction</h2>
+        <p class="sub">The model's best match and confidence scores.</p>
+        <div class="result-box">
+          <div class="result-label">This looks like a</div>
+          <div class="prediction" id="prediction">Waiting…</div>
+          <div class="confidence" id="confidence">Add an image to get started.</div>
+        </div>
+        <div class="bars">
+          <div>
+            <div class="bar-head"><span>🐶 Dog</span><span id="dog-score">—</span></div>
+            <div class="track"><div class="fill" id="dog-bar"></div></div>
+          </div>
+          <div>
+            <div class="bar-head"><span>🐱 Cat</span><span id="cat-score">—</span></div>
+            <div class="track"><div class="fill" id="cat-bar"></div></div>
+          </div>
+        </div>
+        <p class="hint">Tip: For a better prediction, use a well-lit image where the animal is clearly visible. The confidence score shows how strongly the model matches each class.</p>
+      </section>
+    </main>
+    <footer>Powered by your Teachable Machine image model · Dog & Cat</footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+  <script>
+    const MODEL_URL = "./my_model/";
+    let model, webcam, webcamActive = false, selectedImage = null;
+    const $ = id => document.getElementById(id);
+    const status = $("status");
+
+    async function loadModel() {
+      try {
+        model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+        status.textContent = "Model ready! Upload an image or start the camera.";
+        $("classify-btn").disabled = !selectedImage;
+      } catch (e) {
+        status.textContent = "Couldn't load the model. Please run this website using the included local server instructions.";
+        console.error(e);
+      }
+    }
+
+    $("file-input").addEventListener("change", event => {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) { status.textContent = "Please choose an image file."; return; }
+      const url = URL.createObjectURL(file);
+      const img = $("image-preview");
+      img.onload = () => URL.revokeObjectURL(url);
+      img.src = url;
+      img.style.display = "block";
+      $("placeholder").style.display = "none";
+      $("webcam-container").style.display = "none";
+      selectedImage = img;
+      stopCamera();
+      $("classify-btn").disabled = !model;
+      status.textContent = "Image selected. Ready to classify!";
+      resetResults();
+    });
+
+    function resetResults() {
+      $("prediction").textContent = "Ready!";
+      $("confidence").textContent = "Press “Classify image” to see the result.";
+      ["dog","cat"].forEach(k => { $(k+"-score").textContent = "—"; $(k+"-bar").style.width = "0%"; });
+    }
+
+    $("classify-btn").addEventListener("click", async () => {
+      if (!model || !selectedImage) return;
+      try {
+        status.textContent = "Analysing image…";
+        const predictions = await model.predict(selectedImage);
+        showPredictions(predictions);
+        status.textContent = "Done! You can try another image.";
+      } catch (e) { status.textContent = "Sorry, this image could not be classified."; console.error(e); }
+    });
+
+    function showPredictions(predictions) {
+      const sorted = [...predictions].sort((a,b) => b.probability - a.probability);
+      const best = sorted[0];
+      const pretty = best.className;
+      $("prediction").textContent = pretty;
+      $("confidence").textContent = (best.probability * 100).toFixed(1) + "% confidence";
+      predictions.forEach(p => {
+        const key = p.className.toLowerCase();
+        if (key === "dog" || key === "cat") {
+          const pct = p.probability * 100;
+          $(key+"-score").textContent = pct.toFixed(1) + "%";
+          $(key+"-bar").style.width = pct + "%";
+        }
+      });
+    }
+
+    async function startCamera() {
+      if (!model) { status.textContent = "The model is still loading. Please wait."; return; }
+      try {
+        stopCamera();
+        $("image-preview").style.display = "none";
+        $("placeholder").style.display = "none";
+        $("webcam-container").style.display = "block";
+        webcam = new tmImage.Webcam(400, 300, true);
+        await webcam.setup();
+        await webcam.play();
+        webcamActive = true;
+        $("webcam-container").replaceChildren(webcam.canvas);
+        $("camera-btn").style.display = "none";
+        $("stop-btn").style.display = "inline-flex";
+        $("classify-btn").disabled = false;
+        selectedImage = webcam.canvas;
+        status.textContent = "Camera is on. Press “Classify image” to analyse the current frame.";
+        resetResults();
+      } catch (e) {
+        status.textContent = "Camera access was blocked or unavailable. Try uploading an image instead.";
+        console.error(e);
+      }
+    }
+
+    function stopCamera() {
+      if (webcam && webcamActive) { webcam.stop(); }
+      webcamActive = false;
+      $("stop-btn").style.display = "none";
+      $("camera-btn").style.display = "inline-flex";
+      if ($("webcam-container").style.display === "block") $("webcam-container").style.display = "none";
+      if (!selectedImage || selectedImage === webcam?.canvas) {
+        selectedImage = null;
+        $("placeholder").style.display = "block";
+        $("classify-btn").disabled = true;
+      }
+    }
+
+    $("camera-btn").addEventListener("click", startCamera);
+    $("stop-btn").addEventListener("click", () => {
+      stopCamera();
+      $("placeholder").style.display = "block";
+      $("image-preview").style.display = "none";
+      status.textContent = "Camera stopped. Upload an image or start the camera again.";
+      resetResults();
+    });
+    loadModel();
+  </script>
+</body>
+</html>
